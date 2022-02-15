@@ -1,0 +1,64 @@
+---
+# file: aws-dns-record-creation.yml
+# run example: ansible-playbook aws-dns-record-creation.yml
+
+- hosts: localhost
+  gather_facts: no
+
+  # creates prompts user for A/CNAME record creation
+  # can modify to create/update any type of record that route53 allows
+
+  vars_prompt:
+
+     - name: "server_name"
+       prompt:  "What is the A record name (e.g. chicago-ec2-01b)?"
+       default: ""
+       private: no
+
+     - name: "server_a_record_value"
+       prompt:  "What is the A record value (e.g. 111.11.11.111)?"
+       default: ""
+       private: no
+
+     - name: "monitor_name"
+       prompt:  "What is the CNAME record name (e.g. testmon)?"
+       default: ""
+       private: no
+
+# Comment this back in if you need it, remember to include --ask-become-pass when running server.yml or aws-dns-record-creation.yml
+- name: Ensure boto and boto3 modules are installed
+  pip:
+   name: "{{ item }}"
+  with_items:
+   - boto3
+   - botocore
+  delegate_to: localhost
+
+- name: create dns a record
+  community.aws.route53:
+    aws_access_key: "{{ amazon_route53_ansible_access_key_id }}"
+    aws_secret_key: "{{ amazon_route53_ansible_secret_access_key }}"
+    state: present
+    zone: test.com #domain name/zone name in the aws infrastructure; for testing use "google.com" hosted zone
+    record: "{{ server_name }}.test.com" #the DNS record we are trying to work with; for testing use "{{ server_name }}.google.com"
+    type: A
+    ttl: 300 #time to live value of the domain name record
+    value: "{{ server_a_record_value }}" #the IP address and/or record value for the type of record
+    wait: yes #wait for the record to be created before exiting the playbook; with this parameter set playbook would continue to run until the route53 record gets created or failed
+  delegate_to: localhost
+
+- name: create dns cname record
+  community.aws.route53:
+    aws_access_key: "{{ amazon_route53_ansible_access_key_id }}"
+    aws_secret_key: "{{ amazon_route53_ansible_secret_access_key }}"
+    state: present
+    zone: test.com #for testing use google.com hosted zone
+    record: "{{ monitor_name }}monitor.test.com" #for testing use "{{ monitor_name }}monitor.google.com"
+    type: CNAME
+    ttl: 300
+    value: "{{ server_name }}.test.com" #for testing use "{{ server_name }}.google.com"
+    wait: yes
+  delegate_to: localhost
+
+#- name: display results
+#  debug: var=result # display results option

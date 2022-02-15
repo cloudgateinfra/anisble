@@ -1,0 +1,7 @@
+---
+-
+name: install percona toolkit
+apt: pkg=percona-toolkit state=present update_cache=yes
+
+# uninstall percona toolkit and all its other packages
+# sudo apt-get remove percona-toolkit -y && sudo apt-get remove libdbd-mysql-perl -y && sudo apt-get remove libdbi-perl -y && sudo apt-get remove libterm-readkey-perl -y && sudo apt autoremove -y
