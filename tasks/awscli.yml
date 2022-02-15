@@ -1,0 +1,51 @@
+---
+# Vars: username
+# Passwords: aws_keys
+
+- name: Include apache config vars
+  include_vars:
+    file: vars/passwords/aws_keys.yml
+
+- name: Install python setuptools
+  apt:
+    name: python-setuptools
+    state: present
+
+- name: Install python-pip
+  apt:
+    name: python-pip
+    state: latest
+
+- name: Install aws cli
+  pip:
+    name: awscli
+
+- name: Add bin path .profile
+  lineinfile:
+    dest: /home/{{ username | lower }}/.profile
+    line: export PATH=~/.local/bin:$PATH
+    state: present
+
+- name: Add aws path to .profile
+  lineinfile:
+    dest: /home/{{ username | lower }}/.profile
+    line: export PATH=~/.local/bin/aws:$PATH
+    state: present
+
+- name: Create .aws folder
+  file:
+    dest: /home/{{ username | lower }}/.aws
+    state: directory
+    owner: "{{ username | lower }}"
+    group: "{{ username | lower }}"
+    mode: 0775
+
+- name: Add aws cli credentials
+  blockinfile:
+    dest: /home/{{ username | lower }}/.aws/config
+    create: yes
+    owner: "{{ username | lower }}"
+    group: "{{ username | lower }}"
+    mode: 0600
+    block: |
+      {{ aws_keys }}
