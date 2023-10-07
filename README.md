@@ -19,5 +19,3 @@ Below are six Ansible playbook examples showcasing various use cases:
 
 6. **Infrastructure as Code (IaC)**:
    - Provisions AWS infrastructure using Terraform by running Terraform commands in a specified directory.
-
-These examples demonstrate your Ansible skills in various scenarios, from infrastructure provisioning to security and configuration management.
