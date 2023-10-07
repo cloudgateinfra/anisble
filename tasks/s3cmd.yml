@@ -1,0 +1,6 @@
+---
+- name: Install s3cmd
+  apt: pkg=s3cmd state=present #installs s3cmd if exists is okay
+
+- name: Configure s3cmd
+  template: src=s3/s3cfg dest=~/.s3cfg #src is source file / dest is destination of file

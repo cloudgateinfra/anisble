@@ -1,0 +1,12 @@
+---
+- name: Deploy Web App
+  hosts: web_servers
+  tasks:
+    - name: Pull latest code from Git
+      git:
+        repo: https://github.com/your/repository.git
+        dest: /var/www/html
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted

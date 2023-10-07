@@ -1,0 +1,34 @@
+---
+
+# this disables ipv6 for linode and vultr servers
+
+- name: Remove net.ipv4.tcp_rmem on a vultr server, invalid values added by vultr ubuntu 18.04 ISO and they aren't on older vultr servers.
+  sysctl:
+    name: net.ipv4.tcp_rmem
+    state: absent
+    reload: no
+    ignoreerrors: yes
+  when: inventory_hostname.find("vlt") != -1
+
+- name: Remove net.ipv4.tcp_wmem on a vultr server, invalid values added by vultr ubuntu 18.04 ISO and they aren't on older vultr servers.
+  sysctl:
+    name: net.ipv4.tcp_wmem
+    state: absent
+    reload: yes
+    ignoreerrors: yes
+  when: inventory_hostname.find("vlt") != -1
+
+- name: Disable ipv6 in the sysctl settings for linode and vultr servers
+  sysctl:
+   name: '{{ item }}'
+   value: '1'
+   sysctl_set: yes
+   state: present
+   reload: yes
+   ignoreerrors: yes
+  with_items:
+   - net.ipv6.conf.all.disable_ipv6
+   - net.ipv6.conf.default.disable_ipv6
+   - net.ipv6.conf.lo.disable_ipv6
+  when: inventory_hostname.find("lin") != -1 or
+         inventory_hostname.find("vlt") != -1

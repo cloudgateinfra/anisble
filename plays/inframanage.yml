@@ -1,0 +1,15 @@
+---
+- name: Create EC2 instance
+  hosts: localhost
+  tasks:
+    - name: Launch an EC2 instance
+      ec2:
+        key_name: my-key
+        instance_type: t2.micro
+        image: ami-0c55b159cbfafe1f0
+        wait: yes
+      register: ec2
+    - name: Add new EC2 instance to host group
+      add_host:
+        hostname: "{{ ec2.instances[0].public_ip }}"
+        groupname: ec2_instances

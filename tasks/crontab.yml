@@ -1,0 +1,25 @@
+---
+# file: cron-daily-weekly-monthly-setup.yml
+# Changes cron daily, weekly, and monthly hour from default to whatever
+# it is set to in the environment variable cron_daily_weekly_monthly_hour in inventory files.
+
+- name: backup current /etc/crontab file to /var/tmp
+  command: cp /etc/crontab /var/tmp/crontab.{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}.bak
+
+- name: set cron.daily hour
+  lineinfile:
+    path: /etc/crontab
+    regexp: "cron.daily"
+    line: 25 {{ cron_daily_weekly_monthly_hour }}    * * *   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.daily )
+
+- name: set cron.weekly hour
+  lineinfile:
+    path: /etc/crontab
+    regexp: "cron.weekly"
+    line: 47 {{ cron_daily_weekly_monthly_hour }}    * * 7   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.weekly )
+
+- name: set cron.monthly hour
+  lineinfile:
+    path: /etc/crontab
+    regexp: "cron.monthly"
+    line: 52 {{ cron_daily_weekly_monthly_hour }}    1 * *   root    test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.monthly )

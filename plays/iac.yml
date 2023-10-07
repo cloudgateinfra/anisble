@@ -1,0 +1,8 @@
+---
+- name: Provision AWS Infrastructure
+  hosts: localhost
+  tasks:
+    - name: Run Terraform
+      command: terraform apply -auto-approve
+      args:
+        chdir: /path/to/terraform/directory

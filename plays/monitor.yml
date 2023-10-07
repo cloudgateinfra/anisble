@@ -1,0 +1,17 @@
+---
+- name: Deploy Prometheus and Grafana
+  hosts: monitoring_servers
+  tasks:
+    - name: Install Docker
+      apt:
+        name: docker-ce
+        state: present
+    - name: Deploy Prometheus and Grafana containers
+      docker_container:
+        name: "{{ item.name }}"
+        image: "{{ item.image }}"
+        ports:
+          - "{{ item.ports }}"
+      with_items:
+        - { name: "prometheus", image: "prom/prometheus:latest", ports: "9090:9090" }
+        - { name: "grafana", image: "grafana/grafana:latest", ports: "3000:3000" }
