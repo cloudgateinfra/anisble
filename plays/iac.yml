@@ -1,8 +1,56 @@
 ---
-- name: Provision AWS Infrastructure
+- name: Advanced AWS Infrastructure Provisioning with Terraform
   hosts: localhost
+  gather_facts: false
+  vars:
+    terraform_directory: /path/to/terraform/directory
+    aws_profile: default
+    terraform_state_bucket: my-terraform-state-bucket
+    terraform_lock_table: my-terraform-lock-table
+
   tasks:
-    - name: Run Terraform
-      command: terraform apply -auto-approve
-      args:
-        chdir: /path/to/terraform/directory
+    - name: Install required system packages
+      apt:
+        name:
+          - software-properties-common
+          - unzip
+        state: present
+
+    - name: Download and install Terraform
+      unarchive:
+        src: https://releases.hashicorp.com/terraform/1.1.0/terraform_1.1.0_linux_amd64.zip
+        dest: /usr/local/bin/
+        remote_src: yes
+
+    - name: Verify Terraform installation
+      command: terraform --version
+
+    - name: Initialize Terraform
+      command:
+        cmd: terraform init -backend-config="bucket={{ terraform_state_bucket }}" -backend-config="dynamodb_table={{ terraform_lock_table }}" -backend-config="profile={{ aws_profile }}"
+        chdir: "{{ terraform_directory }}"
+
+    - name: Validate Terraform configuration
+      command:
+        cmd: terraform validate
+        chdir: "{{ terraform_directory }}"
+
+    - name: Plan Terraform changes
+      command:
+        cmd: terraform plan -out=tfplan
+        chdir: "{{ terraform_directory }}"
+
+    - name: Apply Terraform changes
+      command:
+        cmd: terraform apply -auto-approve -input=false tfplan
+        chdir: "{{ terraform_directory }}"
+
+    - name: Display Terraform outputs
+      command:
+        cmd: terraform output
+        chdir: "{{ terraform_directory }}"
+      register: terraform_outputs
+
+    - debug:
+        msg: "{{ terraform_outputs.stdout_lines }}"
+

@@ -1,12 +1,58 @@
 ---
-- name: Deploy Web App
+- name: Advanced Web App Deployment
   hosts: web_servers
+  become: yes
+  vars:
+    git_repository: https://github.com/your/repository.git
+    deploy_directory: /var/www/html
+    apache_service_name: apache2
+    backup_directory: /var/backups/web_app_backup
   tasks:
+    - name: Ensure backup directory exists
+      file:
+        path: "{{ backup_directory }}"
+        state: directory
+
+    - name: Backup current web app
+      synchronize:
+        src: "{{ deploy_directory }}/"
+        dest: "{{ backup_directory }}/"
+        recursive: yes
+
     - name: Pull latest code from Git
       git:
-        repo: https://github.com/your/repository.git
-        dest: /var/www/html
-    - name: Restart Apache
+        repo: "{{ git_repository }}"
+        dest: "{{ deploy_directory }}"
+        version: master
+        force: yes
+      register: git_data
+
+    - name: Set permissions for web directory
+      file:
+        path: "{{ deploy_directory }}"
+        owner: www-data
+        group: www-data
+        recurse: yes
+
+    - name: Install necessary dependencies using pip
+      pip:
+        requirements: "{{ deploy_directory }}/requirements.txt"
+        virtualenv: "/opt/my_app_venv"
+
+    - name: Restart Apache if new commits
       service:
-        name: apache2
+        name: "{{ apache_service_name }}"
         state: restarted
+      when: git_data.changed
+
+    - name: Notify team about the deployment
+      mail:
+        host: smtp.mail.com
+        port: 587
+        subject: Web App Deployment Notification
+        body: 'The web app has been successfully deployed with the latest changes!'
+        from: deploybot@mail.com
+        to:
+          - admin1@mail.com
+          - admin2@mail.com
+      when: git_data.changed

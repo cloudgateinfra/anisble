@@ -1,13 +1,62 @@
 ---
-- name: Apply Security Updates
+- name: Apply Advanced Security Updates to Ubuntu Servers
   hosts: all
+  gather_facts: true
   become: yes
+  vars:
+    apt_cache_valid_time: 3600
+
   tasks:
-    - name: Update APT package cache
+    - name: Ensure APT package cache is updated regularly
       apt:
         update_cache: yes
-    - name: Upgrade all packages
+        cache_valid_time: "{{ apt_cache_valid_time }}"
+      when: ansible_os_family == "Debian"
+      tags: 
+        - update_cache
+
+    - name: Upgrade all packages and remove obsolete ones
       apt:
-        upgrade: dist
+        upgrade: full
         autoremove: yes
         autoclean: yes
+      register: apt_changes
+      when: ansible_os_family == "Debian"
+      tags: 
+        - upgrade
+
+    - name: Check if a reboot is required
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+      changed_when: false
+      tags: 
+        - check_reboot
+
+    - name: Reboot the server if necessary
+      reboot:
+        msg: "Rebooting due to kernel upgrade"
+        connect_timeout: 5
+        reboot_timeout: 600
+        pre_reboot_delay: 5
+        post_reboot_delay: 30
+      when: reboot_required.stat.exists
+      tags: 
+        - reboot
+
+  handlers:
+    - name: restart services
+      systemd:
+        state: restarted
+        daemon_reload: yes
+      listen: "restart services"
+      when: apt_changes.changed
+
+    - name: notify admin about changes
+      mail:
+        subject: "Security Updates Applied"
+        body: "Security updates have been applied to {{ ansible_hostname }}"
+        to: admin@example.com
+        from: ansible@example.com
+      listen: "notify admin"
+      when: apt_changes.changed

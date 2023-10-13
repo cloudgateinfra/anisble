@@ -1,18 +1,69 @@
 ---
-- name: Configure Nginx
+- name: Advanced Nginx Configuration
   hosts: web_servers
+  become: yes
+  vars:
+    nginx_config_path: /etc/nginx/nginx.conf
+    nginx_vhost_dir: /etc/nginx/sites-available
+    nginx_sites_enabled_dir: /etc/nginx/sites-enabled
+    custom_vhost_filename: mysite.conf
   tasks:
+    - name: Install required system packages
+      apt:
+        name:
+          - software-properties-common
+          - python3-pip
+        state: present
+
+    - name: Add Nginx Official Repository
+      apt_repository:
+        repo: 'ppa:nginx/stable'
+        state: present
+
     - name: Install Nginx
       apt:
         name: nginx
         state: present
-    - name: Copy Nginx configuration
+        update_cache: yes
+      tags: nginx-install
+
+    - name: Copy Nginx main configuration
       template:
         src: nginx.conf.j2
-        dest: /etc/nginx/nginx.conf
+        dest: "{{ nginx_config_path }}"
       notify: Reload Nginx
+
+    - name: Set up custom Nginx virtual host
+      template:
+        src: "{{ custom_vhost_filename }}.j2"
+        dest: "{{ nginx_vhost_dir }}/{{ custom_vhost_filename }}"
+      notify: Reload Nginx
+
+    - name: Enable custom Nginx virtual host
+      file:
+        src: "{{ nginx_vhost_dir }}/{{ custom_vhost_filename }}"
+        dest: "{{ nginx_sites_enabled_dir }}/{{ custom_vhost_filename }}"
+        state: link
+
+    - name: Ensure UFW allows Nginx traffic
+      ufw:
+        rule: allow
+        name: "Nginx Full"
+
+    - name: Start and enable Nginx service
+      service:
+        name: nginx
+        enabled: yes
+        state: started
+
   handlers:
     - name: Reload Nginx
       service:
         name: nginx
         state: reloaded
+
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+      listen: Force restart Nginx

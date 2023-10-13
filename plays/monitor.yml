@@ -1,17 +1,75 @@
 ---
-- name: Deploy Prometheus and Grafana
+- name: Advanced Deployment of Prometheus and Grafana
   hosts: monitoring_servers
+  become: true
+  vars:
+    prometheus_data_dir: /opt/prometheus_data
+    grafana_data_dir: /opt/grafana_data
+    docker_network_name: monitoring_network
+
   tasks:
+    - name: Install required system packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - software-properties-common
+
+    - name: Add Docker's GPG key
+      apt_key:
+        url: "https://download.docker.com/linux/ubuntu/gpg"
+        state: present
+
+    - name: Add Docker apt repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
     - name: Install Docker
       apt:
         name: docker-ce
         state: present
+        update_cache: yes
+
+    - name: Ensure Docker service is running
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create Docker network for monitoring services
+      docker_network:
+        name: "{{ docker_network_name }}"
+        state: present
+
+    - name: Create directories for Prometheus and Grafana data
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ prometheus_data_dir }}"
+        - "{{ grafana_data_dir }}"
+
     - name: Deploy Prometheus and Grafana containers
       docker_container:
         name: "{{ item.name }}"
         image: "{{ item.image }}"
+        state: started
+        restart_policy: always
         ports:
           - "{{ item.ports }}"
-      with_items:
-        - { name: "prometheus", image: "prom/prometheus:latest", ports: "9090:9090" }
-        - { name: "grafana", image: "grafana/grafana:latest", ports: "3000:3000" }
+        volumes:
+          - "{{ item.volume }}"
+        networks:
+          - name: "{{ docker_network_name }}"
+        env:
+          GRAFANA_ADMIN_USER: admin
+          GRAFANA_ADMIN_PASSWORD: admin_password
+      loop:
+        - { name: "prometheus", image: "prom/prometheus:latest", ports: "9090:9090", volume: "{{ prometheus_data_dir }}:/prometheus" }
+        - { name: "grafana", image: "grafana/grafana:latest", ports: "3000:3000", volume: "{{ grafana_data_dir }}:/var/lib/grafana" }
+
