@@ -1,4 +1,4 @@
-### Ansible Playbooks
+### Ansible Tower
 
 1. **Infrastructure Management**:
    - Creates an AWS EC2 instance using Ansible. This includes:
